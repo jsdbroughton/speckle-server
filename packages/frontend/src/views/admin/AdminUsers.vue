@@ -48,12 +48,12 @@
           </v-list-item-content>
           <v-list-item-action>
             <v-select
-              v-model="user.role"
+              :value="user.role"
               :items="roles"
               label="user role"
               filled
               flat
-              @change="changeUserRole(user)"
+              @change="changeUserRole(user, ...arguments)"
             ></v-select>
           </v-list-item-action>
         </v-list-item>
@@ -67,7 +67,24 @@
         </div>
       </v-list-item-group>
     </v-list>
-    <v-skeleton-loader v-else class="mx-auto" type="card"></v-skeleton-loader>
+    <v-dialog v-model="showConfirmDialog" width="500">
+      <v-card>
+        <v-toolbar flat>
+          <v-toolbar-title>Are you sure?</v-toolbar-title>
+        </v-toolbar>
+        <v-card-text>
+        You are about to change this users' role to bla bla bla
+        <v-alert>
+          Server admins have full access to all data on this server. You better trust them!
+        </v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn>Cancel</v-btn>
+        <v-btn @click="confirmChange()">Confirm Change</v-btn>
+      </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-skeleton-loader v-if="$apollo.loading" class="mx-auto" type="card"></v-skeleton-loader>
   </v-card>
 </template>
 
@@ -123,16 +140,22 @@ export default {
     }, 1000)
   },
   methods: {
-    changeUserRole( user ) {
-
+    changeUserRole(user, args) {
       console.log(user)
+      console.log(args)
+      this.showConfirmDialog = true
     },
-
+    async confirmUserRoleChange() {
+      //TODO
+      this.loading = true
+      await this.removeAdminRole()
+      this.loading = false
+    },
     getUserCurrentRole(user) {
       return user.role
     },
-    removeAdminRole(userId) {
-      this.$apollo.mutate({
+    async removeAdminRole(userId) {
+      await this.$apollo.mutate({
         mutation: gql`
           mutation($userId: String!) {
             userRoleChange(userRoleInput: { id: $userId, role: "server:user" })
@@ -149,8 +172,8 @@ export default {
         }
       })
     },
-    addAdminRole(userId) {
-      this.$apollo.mutate({
+    async addAdminRole(userId) {
+      await this.$apollo.mutate({
         mutation: gql`
           mutation($userId: String!) {
             userRoleChange(userRoleInput: { id: $userId, role: "server:admin" })
